@@ -3,6 +3,7 @@ import {
   Glyphicon, Modal, Button, ControlLabel, FormControl, FormGroup, InputGroup, HelpBlock 
 } from 'react-bootstrap';
 import PhotoFrame from './PhotoFrame';
+import { Map as iMap } from 'immutable';
 import './App.less';
 import 'whatwg-fetch';
 
@@ -12,8 +13,8 @@ class App extends Component {
     super(props);
     this.state = {
       showMenu: true,
-      subredditToAddIsValid: null,
       subredditToAddName: '',
+      subredditsChecked: iMap().set('', null),
       subreddits: ['aww']
     };
   }
@@ -33,20 +34,19 @@ class App extends Component {
   newSubredditFieldChange(event) {
     const subredditName = event.target.value;
 
-    if (!subredditName) {
-      this.setState({subredditToAddIsValid: null});
+    this.setState({subredditToAddName: subredditName});
+
+    if (this.state.subredditsChecked.has(subredditName)) {
       return;
     }
 
-    this.setState({subredditToAddName: subredditName});
-
     fetch(this.getNewSubredditUrl(subredditName), {'no-cors': true})
-      .then(res => this.setState({subredditToAddIsValid: res.status === 200}))
-      .catch(() => this.setState({subredditToAddIsValid: false})); 
+      .then(res => this.setState({subredditsChecked: this.state.subredditsChecked.set(subredditName, res.status === 200)}))
+      .catch(() => this.setState({subredditsChecked: this.state.subredditsChecked.set(subredditName, false)})); 
   }
 
   getSubredditValidationState() {
-    switch (this.state.subredditToAddIsValid) {
+    switch (this.state.subredditsChecked.get(this.state.subredditToAddName)) {
       case true:
         return 'success';
       case false:
@@ -57,6 +57,7 @@ class App extends Component {
   }
 
   render() {
+    const subredditValidationState = this.getSubredditValidationState();
     return (
       <div className="base">
         <Glyphicon 
@@ -88,13 +89,13 @@ class App extends Component {
               }
             </ul>
             <ControlLabel>Add new subreddit</ControlLabel>
-            <FormGroup validationState={this.getSubredditValidationState()}>
+            <FormGroup validationState={subredditValidationState}>
               <InputGroup>
                 <InputGroup.Addon>/r/</InputGroup.Addon>
                 <FormControl type="text" onChange={this.newSubredditFieldChange.bind(this)} />
               </InputGroup>
               {
-                this.state.subredditToAddIsValid === false &&
+                subredditValidationState === 'error' &&
                   <HelpBlock>
                     <a href={this.getNewSubredditUrl(this.state.subredditToAddName, true)}>
                       /r/{this.state.subredditToAddName}
