@@ -3,7 +3,7 @@ import {
   Glyphicon, Modal, Button, ControlLabel, FormControl, FormGroup, InputGroup, HelpBlock 
 } from 'react-bootstrap';
 import PhotoFrame from './PhotoFrame';
-import { Map as iMap } from 'immutable';
+import { Map as iMap, Set as iSet } from 'immutable';
 import './App.less';
 import 'whatwg-fetch';
 
@@ -15,7 +15,7 @@ class App extends Component {
       showMenu: true,
       subredditToAddName: '',
       subredditsChecked: iMap().set('', null),
-      subreddits: ['aww']
+      subreddits: iSet.of('aww')
     };
   }
 
@@ -55,6 +55,13 @@ class App extends Component {
         return undefined;
     }
   }
+  
+  addNewSubreddit() {
+    this.setState({
+      subreddits: this.state.subreddits.add(this.state.subredditToAddName),
+      subredditToAddName: ''
+    });
+  }
 
   render() {
     const subredditValidationState = this.getSubredditValidationState();
@@ -85,14 +92,18 @@ class App extends Component {
             <h4>Subreddits</h4>
             <ul>
               {
-                this.state.subreddits.map(subredditName => <li key={subredditName}>{subredditName}</li>)
+                this.state.subreddits.toList().map(subredditName => <li key={subredditName}>{subredditName}</li>)
               }
             </ul>
             <ControlLabel>Add new subreddit</ControlLabel>
             <FormGroup validationState={subredditValidationState}>
               <InputGroup>
                 <InputGroup.Addon>/r/</InputGroup.Addon>
-                <FormControl type="text" onChange={this.newSubredditFieldChange.bind(this)} />
+                <FormControl 
+                  type="text" 
+                  onChange={this.newSubredditFieldChange.bind(this)} 
+                  onSubmit={this.addNewSubreddit} 
+                  value={this.state.subredditToAddName} />
               </InputGroup>
               {
                 subredditValidationState === 'error' &&
@@ -102,6 +113,7 @@ class App extends Component {
                     </a> is not a valid subreddit.
                   </HelpBlock>
               }
+              <Button onClick={this.addNewSubreddit.bind(this)}>Add</Button>
             </FormGroup>
             
           </Modal.Body>
