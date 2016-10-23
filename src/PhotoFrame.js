@@ -1,12 +1,12 @@
 import React, { Component } from 'react';
 import 'whatwg-fetch';
-import ReactTimeout from 'react-timeout';
 import { 
-  repeat as _repeat, map as _map, filter as _filter, includes as _includes, last as _last, get as _get 
+  map as _map, filter as _filter, includes as _includes, last as _last, get as _get 
 } from 'lodash';
 import mousetrap from 'mousetrap';
 import url from 'url';
 import path from 'path';
+import LoadingSpinner from './LoadingSpinner'
 
 class PhotoFrame extends Component {
   constructor(props) {
@@ -17,10 +17,6 @@ class PhotoFrame extends Component {
       loadCounter: 0,
       redditError: false,
     };
-
-    // TODO: Only have this running when the loader is actually going
-    // The loader should be its own component
-    this.props.setInterval(() => this.setState({loadCounter: this.state.loadCounter + 1}), 700);
 
     this.loadNewEntries();
   }
@@ -70,14 +66,9 @@ class PhotoFrame extends Component {
   }
 
   render() {
-    const currentEntry = this.state.entries[this.state.currentEntryIndex],
-      loadDotMax = 4,
-      currentLoadMod = this.state.loadCounter % loadDotMax,
-      noImagesMessage = this.state.redditError ? 
-        'Reddit is down.' : 
-        `Loading${_repeat('.', currentLoadMod) + _repeat(' ', loadDotMax - currentLoadMod)}`;
+    const currentEntry = this.state.entries[this.state.currentEntryIndex];
 
-    console.log('rendering current image', currentEntry, this.state.entries, this.state.currentEntryIndex);
+    console.log('Rendering current image', {currentEntry, entries: this.state.entries, currentEntryIndex: this.state.currentEntryIndex});
 
     return currentEntry ? (
       <div style={
@@ -90,30 +81,10 @@ class PhotoFrame extends Component {
           height: '100%'
         }
       }>
-      </div>
-    ) : (
-      <div style={
-        {
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: '100%', 
-          height: '100%'
-        }
-      }>
-        <div style={
-          {
-            maxWidth: '50%',
-            fontSize: '7rem'
-          }
-        }>
-          { /* Hardcoding the width is a hack to prevent the word "Loading" from jumping around when the dots are added */ }
-          <p style={{width: '300px'}}>
-            {noImagesMessage}
-          </p>
-        </div>
-      </div>
-    );
+      </div> )
+      : (
+        <LoadingSpinner failureMessage="Reddit is down." loadingFailed={this.state.redditError} />
+      );
   }
 }
 
@@ -128,4 +99,4 @@ function getDisplayableEntries(listing) {
   );
 }
 
-export default ReactTimeout(PhotoFrame);
+export default PhotoFrame;
