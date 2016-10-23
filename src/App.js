@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { 
-  Glyphicon, Modal, Button, ControlLabel, FormControl, FormGroup, InputGroup, HelpBlock 
+  Glyphicon, Modal, Button, ControlLabel, FormControl, FormGroup, InputGroup, HelpBlock, Grid, Row, Col
 } from 'react-bootstrap';
 import PhotoFrame from './PhotoFrame';
 import { Map as iMap, Set as iSet } from 'immutable';
@@ -46,6 +46,12 @@ class App extends Component {
   }
 
   getSubredditValidationState() {
+    if (this.state.subreddits.has(this.state.subredditToAddName)) {
+      // This works because at this point it's the app is simple enough that
+      // this is the only warning state. 
+      return 'warning';
+    }
+
     switch (this.state.subredditsChecked.get(this.state.subredditToAddName)) {
       case true:
         return 'success';
@@ -63,8 +69,15 @@ class App extends Component {
     });
   }
 
+  onNewSubredditKeyPress(event) {
+    if (event.key === 'Enter' && this.getSubredditValidationState() === 'success') {
+      this.addNewSubreddit();
+    }
+  }
+
   render() {
     const subredditValidationState = this.getSubredditValidationState();
+
     return (
       <div className="base">
         <Glyphicon 
@@ -96,30 +109,43 @@ class App extends Component {
               }
             </ul>
             <ControlLabel>Add new subreddit</ControlLabel>
-            <FormGroup validationState={subredditValidationState}>
-              <InputGroup>
-                <InputGroup.Addon>/r/</InputGroup.Addon>
-                <FormControl 
-                  type="text" 
-                  onChange={this.newSubredditFieldChange.bind(this)} 
-                  onSubmit={this.addNewSubreddit} 
-                  value={this.state.subredditToAddName} />
-              </InputGroup>
-              {
-                subredditValidationState === 'error' &&
-                  <HelpBlock>
-                    <a href={this.getNewSubredditUrl(this.state.subredditToAddName, true)}>
-                      /r/{this.state.subredditToAddName}
-                    </a> is not a valid subreddit.
-                  </HelpBlock>
-              }
-              <Button onClick={this.addNewSubreddit.bind(this)}>Add</Button>
-            </FormGroup>
+            <Grid className="no-padding-grid">
+              <Row>
+                <Col xs={10}>
+                  <FormGroup validationState={subredditValidationState}>
+                    <InputGroup>
+                      <InputGroup.Addon>/r/</InputGroup.Addon>
+                      <FormControl 
+                        type="text" 
+                        onChange={this.newSubredditFieldChange.bind(this)} 
+                        onKeyPress={this.onNewSubredditKeyPress.bind(this)} 
+                        value={this.state.subredditToAddName} />
+                    </InputGroup>
+                    {
+                      subredditValidationState === 'error' &&
+                        <HelpBlock>
+                          <a href={this.getNewSubredditUrl(this.state.subredditToAddName, true)}>
+                            /r/{this.state.subredditToAddName}
+                          </a> is not a valid subreddit.
+                        </HelpBlock>
+                    }
+                    {
+                      subredditValidationState === 'warning' &&
+                        <HelpBlock>
+                          <a href={this.getNewSubredditUrl(this.state.subredditToAddName, true)}>
+                            /r/{this.state.subredditToAddName}
+                          </a> is already in the slideshow.
+                        </HelpBlock>
+                    }
+                  </FormGroup>
+                </Col>
+                <Col xs={2}>
+                  <Button onClick={this.addNewSubreddit.bind(this)} disabled={subredditValidationState !== 'success'}>Add</Button>
+                </Col>
+              </Row>
+            </Grid>
             
           </Modal.Body>
-          <Modal.Footer>
-            <Button onClick={this.closeMenu.bind(this)}>Save</Button>
-          </Modal.Footer>
         </Modal>
         <PhotoFrame />
         
