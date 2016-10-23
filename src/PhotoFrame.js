@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import 'whatwg-fetch';
 import { 
-  map as _map, filter as _filter, includes as _includes, last as _last, get as _get 
+  map as _map, filter as _filter, includes as _includes, last as _last, get as _get, reject as _reject 
 } from 'lodash';
 import mousetrap from 'mousetrap';
 import url from 'url';
@@ -56,7 +56,7 @@ class PhotoFrame extends Component {
     this.setState({loadInProgress: true});
 
     console.log('Starting fetch', this.state);
-    fetch(`https://www.reddit.com/r/aww/top.json?after=${_get(_last(this.state.entries), 'name')}`)
+    fetch(`https://www.reddit.com/r/aww/top.json?after=${_get(_last(this.state.entries), 'name', '')}`)
       .then(res => {
         if (res.status !== 200) {
           this.setState({redditError: true, loadInProgress: false});
@@ -67,12 +67,44 @@ class PhotoFrame extends Component {
       })
       .then(json => {
         console.log('Completed fetch');
+        const displayableEntries = getDisplayableEntries(json);
+
+        this.removeMissingImgurImages(displayableEntries);
+
         this.setState({
-          entries: this.state.entries.concat(getDisplayableEntries(json)),
+          entries: this.state.entries.concat(displayableEntries),
           loadInProgress: false
         });
       })
-      .catch(() => this.setState({redditError: true}))
+      .catch(err => {
+        console.log('Failed to load images', err);
+        this.setState({redditError: true})
+      })
+  }
+
+  removeMissingImgurImages(entries) {
+    entries.forEach(entryToVerify => {
+      if (entryToVerify.parsedUrl.host !== 'i.imgur.com') {
+        return;
+      }
+
+      fetch(entryToVerify.url)
+        .then(res => {
+          if (res.url === 'http://i.imgur.com/removed.png') {
+            console.log(
+              'Entry is invalid, so it will be removed from the currentEntries list if it has not yet been viewed', 
+              entryToVerify
+            );
+            this.setState({
+              entries: _reject(
+                this.state.entries, 
+                (entry, index) => 
+                  index > this.state.currentEntryIndex && entry.url === entryToVerify.url
+              )
+            });
+          }
+        })
+    })
   }
 
   render() {
@@ -98,12 +130,11 @@ class PhotoFrame extends Component {
 
 function getDisplayableEntries(listing) {
   return _filter(
-    _map(listing.data.children, child => ({name: child.data.name, url: child.data.url})),
+    _map(listing.data.children, child => ({name: child.data.name, url: child.data.url, parsedUrl: url.parse(child.data.url)})),
     // TODO accept more types of images
-    listing => {
-      const parsedUrl = url.parse(listing.url);
-      return _includes(['i.imgur.com', 'i.redd.it'], parsedUrl.host) && path.extname(parsedUrl.path) !== '.gifv'
-    } 
+    entry => 
+      _includes(['i.imgur.com', 'i.redd.it'], entry.parsedUrl.host) && 
+        path.extname(entry.parsedUrl.path) !== '.gifv'
   );
 }
 
