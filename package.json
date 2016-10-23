@@ -53,9 +53,11 @@
     "bootstrap": "^3.3.7",
     "less": "^2.7.1",
     "less-loader": "^2.2.3",
+    "lodash": "^4.16.4",
     "react": "^15.3.2",
     "react-bootstrap": "^0.30.5",
     "react-dom": "^15.3.2",
+    "react-timeout": "^1.0.0",
     "whatwg-fetch": "^1.0.0"
   },
   "scripts": {
