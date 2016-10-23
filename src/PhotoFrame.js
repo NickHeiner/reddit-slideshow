@@ -1,7 +1,10 @@
 import React, { Component } from 'react';
 import 'whatwg-fetch';
 import ReactTimeout from 'react-timeout';
-import { repeat as _repeat, map as _map, get as _get, compact as _compact } from 'lodash';
+import { repeat as _repeat, map as _map, get as _get, filter as _filter } from 'lodash';
+import mousetrap from 'mousetrap';
+import url from 'url';
+import path from 'path';
 
 class PhotoFrame extends Component {
   constructor(props) {
@@ -13,9 +16,28 @@ class PhotoFrame extends Component {
       redditError: false,
     };
 
+    // TODO: Only have this running when the loader is actually going
+    // The loader should be its own component
     this.props.setInterval(() => this.setState({loadCounter: this.state.loadCounter + 1}), 700);
 
     this.loadNewPhotos();
+  }
+
+  goToNextImage() {
+    this.setState({currentImageIndex: this.state.currentImageIndex + 1})
+  }
+
+  goToPreviousImage() {
+    this.setState({currentImageIndex: Math.min(0, this.state.currentImageIndex - 1)})
+  }
+
+  componentDidMount() {
+    mousetrap.bind(['right'], this.goToNextImage.bind(this));
+    mousetrap.bind(['left'], this.goToPreviousImage.bind(this));
+  }
+  componentWillUnmount() {
+    mousetrap.unbind(['right'], this.goToNextImage.bind(this));
+    mousetrap.unbind(['left'], this.goToPreviousImage.bind(this));
   }
 
   loadNewPhotos() {
@@ -41,6 +63,8 @@ class PhotoFrame extends Component {
       noImagesMessage = this.state.redditError ? 
         'Reddit is down.' : 
         `Loading${_repeat('.', currentLoadMod) + _repeat(' ', loadDotMax - currentLoadMod)}`;
+
+    console.log('rendering current image', currentImage);
 
     return currentImage ? (
       <div style={
@@ -81,8 +105,13 @@ class PhotoFrame extends Component {
 }
 
 function imagesOfRedditListing(listing) {
-  return _compact(
-    _map(listing.data.children, child => _get(child, ['data', 'preview', 'images', 0, 'source', 'url']))
+  return _filter(
+    _map(listing.data.children, child => _get(child, ['data', 'url'])),
+    // TODO accept more types of images
+    listingUrl => {
+      const parsedUrl = url.parse(listingUrl);
+      return parsedUrl.host === 'i.imgur.com' && path.extname(parsedUrl.path) !== '.gifv'
+    } 
   );
 }
 
