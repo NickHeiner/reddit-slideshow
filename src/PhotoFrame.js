@@ -1,8 +1,10 @@
 import React, { Component } from 'react';
 import 'whatwg-fetch';
 import { 
-  map as _map, filter as _filter, includes as _includes, last as _last, get as _get, reject as _reject 
+  map as _map, filter as _filter, includes as _includes, last as _last, get as _get, reject as _reject, 
+  forEach as _forEach, shuffle as _shuffle
 } from 'lodash';
+import { Set as iSet } from 'immutable';
 import mousetrap from 'mousetrap';
 import url from 'url';
 import path from 'path';
@@ -16,7 +18,7 @@ class PhotoFrame extends Component {
       currentEntryIndex: 0,
       loadCounter: 0,
       redditError: false,
-      loadInProgress: false,
+      loadsInProgress: iSet(),
     };
   }
 
@@ -49,17 +51,24 @@ class PhotoFrame extends Component {
     mousetrap.unbind(['left'], this.goToPreviousImage.bind(this));
   }
 
-  loadNewEntries() {
-    if (this.state.loadInProgress) {
+  loadNewEntry(subredditName) {
+    if (this.state.loadsInProgress.has(subredditName)) {
       return;
     }
-    this.setState({loadInProgress: true});
 
-    console.log('Starting fetch', this.state);
-    fetch(`https://www.reddit.com/r/aww/top.json?after=${_get(_last(this.state.entries), 'name', '')}`)
+    this.setState({loadsInProgress: this.state.loadsInProgress.add(subredditName)});
+
+    // Some day I will get Lodash chaining working in a tree-shaking compatible way :)
+    const after = _get(_last(_filter(this.state.entries, {subredditName})), 'name', '');
+
+    console.log('Starting fetch', {subredditName, after});
+    fetch(`https://www.reddit.com/r/${subredditName}/top.json?after=${after}`)
       .then(res => {
         if (res.status !== 200) {
-          this.setState({redditError: true, loadInProgress: false});
+          // TODO: We could set redditError only if everything is bombing out.
+          // Also, if there are valid images to show, we don't need to hide them 
+          // just because a subsequent load failed.
+          this.setState({redditError: true, loadsInProgress: this.state.loadsInProgress.delete(subredditName)});
           return;
         }
 
@@ -67,19 +76,31 @@ class PhotoFrame extends Component {
       })
       .then(json => {
         console.log('Completed fetch');
-        const displayableEntries = getDisplayableEntries(json);
+        const displayableEntries = getDisplayableEntries(json, subredditName);
 
         this.removeMissingImgurImages(displayableEntries);
 
         this.setState({
-          entries: this.state.entries.concat(displayableEntries),
-          loadInProgress: false
+          entries: this.mixInNewEntries(displayableEntries),
+          loadsInProgress: this.state.loadsInProgress.delete(subredditName)
         });
       })
       .catch(err => {
         console.log('Failed to load images', err);
         this.setState({redditError: true})
-      })
+      });
+  }
+
+  mixInNewEntries(newEntries) {
+    const seenEntries = this.state.entries.slice(0, this.state.currentEntryIndex),
+      unseenEntries = this.state.entries.slice(this.state.currentEntryIndex),
+      newUnseenEntries = _shuffle(newEntries.concat(unseenEntries));
+
+    return seenEntries.concat(newUnseenEntries);
+  }
+
+  loadNewEntries() {
+    this.props.subreddits.forEach(this.loadNewEntry.bind(this));
   }
 
   removeMissingImgurImages(entries) {
@@ -128,9 +149,14 @@ class PhotoFrame extends Component {
   }
 }
 
-function getDisplayableEntries(listing) {
+function getDisplayableEntries(listing, subredditName) {
   return _filter(
-    _map(listing.data.children, child => ({name: child.data.name, url: child.data.url, parsedUrl: url.parse(child.data.url)})),
+    _map(listing.data.children, child => ({
+      name: child.data.name, 
+      url: child.data.url, 
+      parsedUrl: url.parse(child.data.url),
+      subredditName
+    })),
     // TODO accept more types of images
     entry => 
       _includes(['i.imgur.com', 'i.redd.it'], entry.parsedUrl.host) && 
