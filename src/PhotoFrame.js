@@ -1,7 +1,9 @@
 import React, { Component } from 'react';
 import 'whatwg-fetch';
 import ReactTimeout from 'react-timeout';
-import { repeat as _repeat, map as _map, filter as _filter, includes as _includes } from 'lodash';
+import { 
+  repeat as _repeat, map as _map, filter as _filter, includes as _includes, last as _last, get as _get 
+} from 'lodash';
 import mousetrap from 'mousetrap';
 import url from 'url';
 import path from 'path';
@@ -24,8 +26,14 @@ class PhotoFrame extends Component {
   }
 
   goToNextImage() {
-    // TODO: Load new content, instead of just capping it at the initial load.
-    this.setState({currentEntryIndex: Math.min(this.state.currentEntryIndex + 1, this.state.entries.length - 1)})
+    const maxEntryIndex = this.state.entries.length - 1, 
+      nextEntryIndex = Math.min(maxEntryIndex, this.state.currentEntryIndex + 1);
+    
+    if (nextEntryIndex === maxEntryIndex) {
+      this.loadNewEntries();
+    }
+
+    this.setState({currentEntryIndex: nextEntryIndex});
   }
 
   goToPreviousImage() {
@@ -43,7 +51,7 @@ class PhotoFrame extends Component {
 
   loadNewEntries() {
     console.log('Starting fetch');
-    fetch('https://www.reddit.com/r/aww/top.json')
+    fetch(`https://www.reddit.com/r/aww/top.json?after=${_get(_last(this.state.entries), 'name')}`)
       .then(res => {
         if (res.status !== 200) {
           this.setState({redditError: true});
@@ -55,7 +63,7 @@ class PhotoFrame extends Component {
       .then(json => {
         console.log('Completed fetch');
         this.setState({
-          entries: getDisplayableEntries(json)
+          entries: this.state.entries.concat(getDisplayableEntries(json))
         });
       })
       .catch(() => this.setState({redditError: true}))
