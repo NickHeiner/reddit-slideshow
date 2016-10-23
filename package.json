@@ -55,7 +55,8 @@
     "less-loader": "^2.2.3",
     "react": "^15.3.2",
     "react-bootstrap": "^0.30.5",
-    "react-dom": "^15.3.2"
+    "react-dom": "^15.3.2",
+    "whatwg-fetch": "^1.0.0"
   },
   "scripts": {
     "start": "node scripts/start.js",
