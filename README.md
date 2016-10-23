@@ -4,3 +4,4 @@ This is a small hack I made to play around with React. I'm deliberately not adhe
 
 ## Future Improvements
 * Add ability to remove subreddits from the list
+* Fix layout for larger screens 
