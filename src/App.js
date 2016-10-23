@@ -12,7 +12,7 @@ class App extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      showMenu: true,
+      showMenu: false,
       subredditToAddName: '',
       subredditsChecked: iMap().set('', null),
       subreddits: iSet.of('aww')
@@ -40,7 +40,7 @@ class App extends Component {
       return;
     }
 
-    fetch(this.getNewSubredditUrl(subredditName), {'no-cors': true})
+    fetch(this.getNewSubredditUrl(subredditName))
       .then(res => this.setState({subredditsChecked: this.state.subredditsChecked.set(subredditName, res.status === 200)}))
       .catch(() => this.setState({subredditsChecked: this.state.subredditsChecked.set(subredditName, false)})); 
   }
@@ -147,7 +147,7 @@ class App extends Component {
             
           </Modal.Body>
         </Modal>
-        <PhotoFrame />
+        <PhotoFrame subreddits={this.state.subreddits} />
         
       </div>
     );
