@@ -62,7 +62,7 @@ class PhotoFrame extends Component {
     const after = _get(_last(_filter(this.state.entries, {subredditName})), 'name', '');
 
     console.log('Starting fetch', {subredditName, after});
-    fetch(`https://www.reddit.com/r/${subredditName}/top.json?after=${after}`)
+    fetch(`https://www.reddit.com/r/${subredditName}/top.json?t=${this.props.topTimeSpan}&after=${after}`)
       .then(res => {
         if (res.status !== 200) {
           // TODO: We could set redditError only if everything is bombing out.

@@ -1,21 +1,32 @@
 import React, { Component } from 'react';
 import { 
-  Glyphicon, Modal, Button, ControlLabel, FormControl, FormGroup, InputGroup, HelpBlock, Grid, Row, Col
+  Glyphicon, Modal, Button, ControlLabel, FormControl, FormGroup, InputGroup, HelpBlock, Grid, Row, Col,
+  Radio
 } from 'react-bootstrap';
 import PhotoFrame from './PhotoFrame';
 import { Map as iMap, Set as iSet } from 'immutable';
 import './App.less';
 import 'whatwg-fetch';
+import { capitalize as _capitalize } from 'lodash';
 
 class App extends Component {
 
   constructor(props) {
     super(props);
     this.state = {
-      showMenu: false,
+      showMenu: true,
       subredditToAddName: '',
       subredditsChecked: iMap().set('', null),
-      subreddits: iSet.of('aww')
+      subreddits: iSet.of('aww'),
+      topTimeSpans: [
+        'hour',
+        'day',
+        'week',
+        'month',
+        'year',
+        'all'
+      ],
+      selectedTopTimeSpan: 'week'
     };
   }
 
@@ -73,6 +84,10 @@ class App extends Component {
     if (event.key === 'Enter' && this.getSubredditValidationState() === 'success') {
       this.addNewSubreddit();
     }
+  }
+
+  setTopTimeSpan(timeSpan) {
+    this.setState({selectedTopTimeSpan: timeSpan});
   }
 
   render() {
@@ -144,10 +159,25 @@ class App extends Component {
                 </Col>
               </Row>
             </Grid>
+
+            <h4>Query Options</h4>
+            <FormGroup>
+              {
+                this.state.topTimeSpans.map(timeSpan => (
+                  <Radio 
+                    inline 
+                    key={timeSpan} 
+                    checked={this.state.selectedTopTimeSpan === timeSpan} 
+                    onChange={() => this.setTopTimeSpan(timeSpan)}>
+                    {_capitalize(timeSpan)}
+                  </Radio>
+                ))
+              }
+            </FormGroup>
             
           </Modal.Body>
         </Modal>
-        <PhotoFrame subreddits={this.state.subreddits} />
+        <PhotoFrame subreddits={this.state.subreddits} topTimeSpan={this.state.selectedTopTimeSpan} />
         
       </div>
     );
