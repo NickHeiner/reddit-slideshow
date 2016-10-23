@@ -16,8 +16,11 @@ class PhotoFrame extends Component {
       currentEntryIndex: 0,
       loadCounter: 0,
       redditError: false,
+      loadInProgress: false,
     };
+  }
 
+  componentWillMount() {
     this.loadNewEntries();
   }
 
@@ -25,7 +28,8 @@ class PhotoFrame extends Component {
     const maxEntryIndex = this.state.entries.length - 1, 
       nextEntryIndex = Math.min(maxEntryIndex, this.state.currentEntryIndex + 1);
     
-    if (nextEntryIndex === maxEntryIndex) {
+    // Start loading early so the user does not have to wait for the response.
+    if (nextEntryIndex >= maxEntryIndex - 2) {
       this.loadNewEntries();
     }
 
@@ -46,11 +50,16 @@ class PhotoFrame extends Component {
   }
 
   loadNewEntries() {
-    console.log('Starting fetch');
+    if (this.state.loadInProgress) {
+      return;
+    }
+    this.setState({loadInProgress: true});
+
+    console.log('Starting fetch', this.state);
     fetch(`https://www.reddit.com/r/aww/top.json?after=${_get(_last(this.state.entries), 'name')}`)
       .then(res => {
         if (res.status !== 200) {
-          this.setState({redditError: true});
+          this.setState({redditError: true, loadInProgress: false});
           return;
         }
 
@@ -59,7 +68,8 @@ class PhotoFrame extends Component {
       .then(json => {
         console.log('Completed fetch');
         this.setState({
-          entries: this.state.entries.concat(getDisplayableEntries(json))
+          entries: this.state.entries.concat(getDisplayableEntries(json)),
+          loadInProgress: false
         });
       })
       .catch(() => this.setState({redditError: true}))
@@ -70,7 +80,7 @@ class PhotoFrame extends Component {
 
     console.log('Rendering current image', {currentEntry, entries: this.state.entries, currentEntryIndex: this.state.currentEntryIndex});
 
-    return currentEntry ? (
+    return currentEntry ? 
       <div style={
         {
           backgroundImage: `url(${currentEntry.url})`, 
@@ -81,10 +91,8 @@ class PhotoFrame extends Component {
           height: '100%'
         }
       }>
-      </div> )
-      : (
-        <LoadingSpinner failureMessage="Reddit is down." loadingFailed={this.state.redditError} />
-      );
+      </div> 
+      : <LoadingSpinner failureMessage="Reddit is down." loadingFailed={this.state.redditError} />;
   }
 }
 

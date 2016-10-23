@@ -4,11 +4,13 @@ import {
   repeat as _repeat  
 } from 'lodash';
 
+const loadDotMax = 4;
+
 class LoadingSpinner extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      loadCounter: 0,
+      loadCounter: loadDotMax - 1,
       loadingFailed: false,
     };
   }
@@ -18,8 +20,7 @@ class LoadingSpinner extends Component {
   }
 
   render() {
-    const loadDotMax = 4,
-      currentLoadMod = this.state.loadCounter % loadDotMax,
+    const currentLoadMod = this.state.loadCounter % loadDotMax,
       noImagesMessage = this.props.loadingFailed ? 
         this.props.failureMessage : 
         `Loading${_repeat('.', currentLoadMod) + _repeat(' ', loadDotMax - currentLoadMod)}`;
