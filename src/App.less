@@ -1,4 +1,4 @@
-.grid-base {
+.base {
   margin: 0;
   padding: 0;
   width: 100%;
@@ -10,4 +10,15 @@
   top: 0;
 
   color: #eee;
+}
+
+@menuBackground: #444;
+
+.menu-trigger {
+  background: @menuBackground;
+}
+
+.menu-trigger:hover {
+  background: lighten(@menuBackground, 10%);
+  cursor: pointer;
 }
