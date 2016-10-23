@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import 'whatwg-fetch';
 import ReactTimeout from 'react-timeout';
-import { repeat as _repeat, map as _map, get as _get, filter as _filter } from 'lodash';
+import { repeat as _repeat, map as _map, filter as _filter, includes as _includes } from 'lodash';
 import mousetrap from 'mousetrap';
 import url from 'url';
 import path from 'path';
@@ -10,8 +10,8 @@ class PhotoFrame extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      images: [],
-      currentImageIndex: 0,
+      entries: [],
+      currentEntryIndex: 0,
       loadCounter: 0,
       redditError: false,
     };
@@ -20,15 +20,16 @@ class PhotoFrame extends Component {
     // The loader should be its own component
     this.props.setInterval(() => this.setState({loadCounter: this.state.loadCounter + 1}), 700);
 
-    this.loadNewPhotos();
+    this.loadNewEntries();
   }
 
   goToNextImage() {
-    this.setState({currentImageIndex: this.state.currentImageIndex + 1})
+    // TODO: Load new content, instead of just capping it at the initial load.
+    this.setState({currentEntryIndex: Math.min(this.state.currentEntryIndex + 1, this.state.entries.length - 1)})
   }
 
   goToPreviousImage() {
-    this.setState({currentImageIndex: Math.min(0, this.state.currentImageIndex - 1)})
+    this.setState({currentEntryIndex: Math.max(0, this.state.currentEntryIndex - 1)})
   }
 
   componentDidMount() {
@@ -40,7 +41,8 @@ class PhotoFrame extends Component {
     mousetrap.unbind(['left'], this.goToPreviousImage.bind(this));
   }
 
-  loadNewPhotos() {
+  loadNewEntries() {
+    console.log('Starting fetch');
     fetch('https://www.reddit.com/r/aww/top.json')
       .then(res => {
         if (res.status !== 200) {
@@ -50,26 +52,29 @@ class PhotoFrame extends Component {
 
         return res.json();
       })
-      .then(json => this.setState({
-        images: imagesOfRedditListing(json)
-      }))
+      .then(json => {
+        console.log('Completed fetch');
+        this.setState({
+          entries: getDisplayableEntries(json)
+        });
+      })
       .catch(() => this.setState({redditError: true}))
   }
 
   render() {
-    const currentImage = this.state.images[this.state.currentImageIndex],
+    const currentEntry = this.state.entries[this.state.currentEntryIndex],
       loadDotMax = 4,
       currentLoadMod = this.state.loadCounter % loadDotMax,
       noImagesMessage = this.state.redditError ? 
         'Reddit is down.' : 
         `Loading${_repeat('.', currentLoadMod) + _repeat(' ', loadDotMax - currentLoadMod)}`;
 
-    console.log('rendering current image', currentImage);
+    console.log('rendering current image', currentEntry, this.state.entries, this.state.currentEntryIndex);
 
-    return currentImage ? (
+    return currentEntry ? (
       <div style={
         {
-          backgroundImage: `url(${currentImage})`, 
+          backgroundImage: `url(${currentEntry.url})`, 
           backgroundSize: 'contain',
           backgroundPosition: 'center center',
           backgroundRepeat: 'no-repeat',
@@ -104,13 +109,13 @@ class PhotoFrame extends Component {
   }
 }
 
-function imagesOfRedditListing(listing) {
+function getDisplayableEntries(listing) {
   return _filter(
-    _map(listing.data.children, child => _get(child, ['data', 'url'])),
+    _map(listing.data.children, child => ({name: child.data.name, url: child.data.url})),
     // TODO accept more types of images
-    listingUrl => {
-      const parsedUrl = url.parse(listingUrl);
-      return parsedUrl.host === 'i.imgur.com' && path.extname(parsedUrl.path) !== '.gifv'
+    listing => {
+      const parsedUrl = url.parse(listing.url);
+      return _includes(['i.imgur.com', 'i.redd.it'], parsedUrl.host) && path.extname(parsedUrl.path) !== '.gifv'
     } 
   );
 }
